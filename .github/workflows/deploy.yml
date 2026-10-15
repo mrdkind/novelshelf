@@ -1,0 +1,81 @@
+name: Deploy NovelShelf to GitHub Pages
+
+# انتشار خودکار: با هر تغییر در شاخه اصلی یا اجرای دستی
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# مجوزهای حداقلی برای انتشار رسمی GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# فقط آخرین انتشار در صف باشد؛ انتشار نیمه‌کاره رها نمی‌شود
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: ساخت و اعتبارسنجی
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت کد
+        uses: actions/checkout@v4
+
+      - name: نصب Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: نصب وابستگی‌ها (با Lockfile)
+        run: npm ci
+
+      - name: اعتبارسنجی کتابخانه
+        run: npm run validate:library
+
+      - name: اجرای تست‌ها
+        run: npm test
+
+      - name: محاسبه Base Path سایت
+        id: base
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          # اگر مخزن، مخزن «سایت کاربر» باشد (USERNAME.github.io) سایت روی ریشه است
+          if [ "$REPO_NAME" = "${OWNER}.github.io" ]; then
+            echo "base=/" >> "$GITHUB_OUTPUT"
+            echo "Base Path: /"
+          else
+            echo "base=/${REPO_NAME}/" >> "$GITHUB_OUTPUT"
+            echo "Base Path: /${REPO_NAME}/"
+          fi
+
+      - name: ساخت سایت
+        run: npm run build -- --base="${{ steps.base.outputs.base }}"
+
+      - name: تنظیم Pages
+        uses: actions/configure-pages@v5
+
+      - name: آپلود خروجی برای انتشار
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: انتشار روی GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: انتشار
+        id: deployment
+        uses: actions/deploy-pages@v4

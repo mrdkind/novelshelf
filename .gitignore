@@ -1,0 +1,15 @@
+# وابستگی‌ها و خروجی Build
+node_modules/
+dist/
+dist-ssr/
+
+# کاتالوگ در زمان Build تولید می‌شود (نباید در مخزن کهنه شود)
+public/catalog.json
+
+# لاگ‌ها و فایل‌های محلی
+*.log
+npm-debug.log*
+.DS_Store
+*.local
+.idea/
+.vscode/

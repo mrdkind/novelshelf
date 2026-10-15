@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="55%" stop-color="#115e59"/>
+      <stop offset="100%" stop-color="#134e4a"/>
+    </linearGradient>
+    <linearGradient id="spine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(0,0,0,0.35)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="url(#bg)"/>
+  <rect width="70" height="900" fill="url(#spine)"/>
+  <rect x="24" y="24" width="552" height="852" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="3" rx="14"/>
+  <g fill="#ffffff">
+    <text x="300" y="330" font-family="Tahoma, sans-serif" font-size="44" font-weight="bold" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override">گلستان سعدی</text>
+    <text x="300" y="395" font-family="Georgia, serif" font-size="30" font-style="italic" text-anchor="middle">Golestan of Saadi</text>
+    <text x="300" y="470" font-family="serif" font-size="56" text-anchor="middle">❦</text>
+    <text x="300" y="760" font-family="Tahoma, sans-serif" font-size="30" text-anchor="middle" direction="rtl">سعدی شیرازی</text>
+    <text x="300" y="810" font-family="Tahoma, sans-serif" font-size="20" fill="rgba(255,255,255,0.75)" text-anchor="middle" direction="rtl">نسخهٔ نمونهٔ کتاب‌خوان NovelShelf</text>
+  </g>
+</svg>

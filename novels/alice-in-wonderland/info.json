@@ -1,0 +1,37 @@
+{
+  "id": "alice-in-wonderland",
+  "titleOriginal": "Alice's Adventures in Wonderland",
+  "titleFa": "ماجراهای آلیس در سرزمین عجایب",
+  "titleAlt": [
+    "Alice in Wonderland"
+  ],
+  "author": "Lewis Carroll",
+  "translator": null,
+  "description": "داستان کلاسیک دخترکی که به دنبال خرگوشی سفید در سوراخی می‌افتد و وارد سرزمینی عجیب می‌شود؛ سرزمینی با مهمانی چای دیوانه‌وار، ملکهٔ خشمگین و موجوداتی بی‌نظیر. این نسخهٔ نمونه، متن اصلی مالکیت عمومی (۱۸۶۵) است و برای نمایش قابلیت‌های کتاب‌خوان — تصاویر، لینک داخلی و چندجلدی — به دو جلد تقسیم شده است.",
+  "genres": [
+    "فانتزی",
+    "کلاسیک",
+    "داستان کودکان"
+  ],
+  "language": "en",
+  "direction": "ltr",
+  "status": "completed",
+  "cover": "cover.svg",
+  "year": 1865,
+  "license": "Public Domain",
+  "source": null,
+  "notes": "متن مالکیت عمومی است؛ برای نمونه‌سازی امکانات کتاب‌خوان به دو جلد تقسیم شده.",
+  "addedAt": "2026-10-10",
+  "volumes": [
+    {
+      "file": "volume-01.epub",
+      "title": "جلد ۱ — فصل‌های ۱ تا ۴",
+      "order": 1
+    },
+    {
+      "file": "volume-02.epub",
+      "title": "جلد ۲ — فصل‌های ۵ تا ۸",
+      "order": 2
+    }
+  ]
+}

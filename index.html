@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="NovelShelf — کتابخانه آنلاین ناول و کتاب‌خوان EPUB با تجربه مطالعه فارسی" />
+    <meta name="theme-color" content="#0f1115" />
+    <title>NovelShelf — کتابخانه ناول</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // اعمال تم ذخیره‌شده قبل از اولین رندر برای جلوگیری از پرش رنگ
+      (function () {
+        try {
+          var t = localStorage.getItem('ns-site-theme');
+          if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          else document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>برای استفاده از NovelShelf باید جاوااسکریپت مرورگر فعال باشد.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
