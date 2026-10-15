@@ -20,7 +20,7 @@ export const REPO_URL = '';
 export const CONTACT_URL = '';
 
 /** نسخه پشتیبان Export/Import */
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 
 /** سقف پیشرفت‌های ذخیره‌شده در تاریخچه */
 export const HISTORY_LIMIT = 60;

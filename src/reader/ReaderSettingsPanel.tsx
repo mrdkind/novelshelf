@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { CustomFont, ReaderSettings, ReaderTheme } from '@/types';
 import { THEME_PALETTES } from './readerSettings';
+import { faDigits } from '@/services/persian';
 import { useToast } from '@/components/Toast';
 
 interface ReaderSettingsPanelProps {
@@ -228,7 +229,7 @@ export default function ReaderSettingsPanel({
               value={Math.round(settings.bgImageOpacity * 100)}
               onChange={(e) => set({ bgImageOpacity: Number(e.target.value) / 100 })}
             />
-            <output>{Math.round(settings.bgImageOpacity * 100)}٪</output>
+            <output>{faDigits(Math.round(settings.bgImageOpacity * 100))}٪</output>
           </div>
         )}
         {settings.bgImageUrl && !isScrolled && (
@@ -403,7 +404,7 @@ export default function ReaderSettingsPanel({
             value={settings.fontSize}
             onChange={(e) => set({ fontSize: Number(e.target.value) })}
           />
-          <output>{settings.fontSize}٪</output>
+          <output>{faDigits(settings.fontSize)}٪</output>
         </div>
         <div className="slider-row">
           <label htmlFor="ns-lh">فاصله خطوط</label>
@@ -417,7 +418,7 @@ export default function ReaderSettingsPanel({
             value={settings.lineHeight}
             onChange={(e) => set({ lineHeight: Number(e.target.value) })}
           />
-          <output>{settings.lineHeight.toFixed(1)}</output>
+          <output>{faDigits(settings.lineHeight.toFixed(1))}</output>
         </div>
         <div className="slider-row">
           <label htmlFor="ns-ps">فاصله پاراگراف‌ها</label>
@@ -431,7 +432,7 @@ export default function ReaderSettingsPanel({
             value={settings.paragraphSpacing}
             onChange={(e) => set({ paragraphSpacing: Number(e.target.value) })}
           />
-          <output>{settings.paragraphSpacing.toFixed(1)}em</output>
+          <output>{faDigits(settings.paragraphSpacing.toFixed(1))}em</output>
         </div>
         <div className="slider-row">
           <label htmlFor="ns-ws">فاصله کلمات</label>
@@ -445,7 +446,7 @@ export default function ReaderSettingsPanel({
             value={settings.wordSpacing}
             onChange={(e) => set({ wordSpacing: Number(e.target.value) })}
           />
-          <output>{settings.wordSpacing}px</output>
+          <output>{faDigits(settings.wordSpacing)}px</output>
         </div>
         <div className="slider-row">
           <label htmlFor="ns-mw">عرض ستون متن</label>
@@ -460,7 +461,7 @@ export default function ReaderSettingsPanel({
             onChange={(e) => set({ maxWidth: Number(e.target.value) })}
             disabled={!isScrolled}
           />
-          <output>{isScrolled ? `${settings.maxWidth}rem` : '—'}</output>
+          <output className={isScrolled ? '' : 'off'}>{faDigits(settings.maxWidth)}rem</output>
         </div>
         <div className="slider-row">
           <label htmlFor="ns-pm">حاشیه صفحه</label>
@@ -475,7 +476,7 @@ export default function ReaderSettingsPanel({
             onChange={(e) => set({ pageMargin: Number(e.target.value) })}
             disabled={!isScrolled}
           />
-          <output>{isScrolled ? `${settings.pageMargin}px` : '—'}</output>
+          <output className={isScrolled ? '' : 'off'}>{faDigits(settings.pageMargin)}px</output>
         </div>
       </section>
 
@@ -512,7 +513,7 @@ export default function ReaderSettingsPanel({
             onChange={(e) => set({ autoScrollSpeed: Number(e.target.value) })}
             disabled={!isScrolled || !settings.autoScroll}
           />
-          <output>{settings.autoScrollSpeed}px/s</output>
+          <output>{faDigits(settings.autoScrollSpeed)}px/s</output>
         </div>
       </section>
 

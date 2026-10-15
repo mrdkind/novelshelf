@@ -87,7 +87,7 @@ function ContinueReading() {
             <div className="info">
               <span className="t">{displayTitle(novel)}</span>
               <span className="s">
-                {volume.title} — {p.chapterTitle || 'فصل جاری'}
+                {volume.title}؛ {p.chapterTitle || 'فصل جاری'}
               </span>
               <span className="p card-progress">
                 <span className="progress-track">
@@ -148,7 +148,7 @@ export default function HomePage() {
           <Sparkles size={22} style={{ color: 'var(--accent)', verticalAlign: 'middle', marginInlineStart: '0.4rem' }} />
         </h1>
         <p>
-          کتابخانه آنلاین مطالعه ناول و کتاب‌های EPUB — بدون ثبت‌نام، مستقیم در مرورگر. نشانک‌ها، پیشرفت مطالعه و
+          کتابخانه آنلاین مطالعه ناول و کتاب‌های EPUB، بدون ثبت‌نام و مستقیم در مرورگر. نشانک‌ها، پیشرفت مطالعه و
           تنظیمات شما به‌صورت امن در همین مرورگر ذخیره می‌شوند.
         </p>
         <div className="actions">

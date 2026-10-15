@@ -151,7 +151,7 @@ export default function NovelDetailPage() {
               </span>
             )}
             <span className="m">
-              <Layers size={15} /> {novel.volumes.length} جلد — {totalChapters(novel)} فصل
+              <Layers size={15} /> {novel.volumes.length} جلد؛ {totalChapters(novel)} فصل
             </span>
             <span className="m">
               <Globe size={15} /> {novel.language.toUpperCase()}
@@ -183,7 +183,7 @@ export default function NovelDetailPage() {
             <button type="button" className="btn primary" onClick={() => startReading()}>
               {latestProgress ? (
                 <>
-                  <Play size={16} /> ادامه مطالعه {latestProgress.p.chapterTitle ? `— ${latestProgress.p.chapterTitle}` : ''}
+                  <Play size={16} /> ادامه مطالعه {latestProgress.p.chapterTitle ? `: ${latestProgress.p.chapterTitle}` : ''}
                 </>
               ) : (
                 <>
@@ -233,8 +233,8 @@ export default function NovelDetailPage() {
                   <BookOpen size={17} /> {vol.title}
                 </h3>
                 <span className="sub">
-                  {vol.chapters.length} فصل {vol.size ? `— ${formatBytes(vol.size)}` : ''}
-                  {readSet.size > 0 ? ` — ${readSet.size} خوانده‌شده` : ''}
+                  {vol.chapters.length} فصل {vol.size ? `؛ ${formatBytes(vol.size)}` : ''}
+                  {readSet.size > 0 ? `؛ ${readSet.size} خوانده‌شده` : ''}
                 </span>
                 <div className="actions">
                   <button type="button" className="btn small primary" onClick={() => startReading(vol.id)}>

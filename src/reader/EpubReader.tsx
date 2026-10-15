@@ -4,6 +4,7 @@ import ePub from 'epubjs';
 import type { Book, Contents, Rendition, TocItem } from 'epubjs';
 import {
   ArrowRight,
+  BookOpen,
   Bookmark as BookmarkIcon,
   BookmarkPlus,
   Check,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { Bookmark, CustomFont, Novel, ReaderSettings, Volume } from '@/types';
 import { loadEpub, formatBytes } from '@/services/epubLoader';
+import { faDigits } from '@/services/persian';
 import {
   customFontFaceCss,
   effectiveDirection,
@@ -141,6 +143,9 @@ export default function EpubReader(props: EpubReaderProps) {
     () => effectiveDirection(settings, volume.language ?? novel.language),
     [settings.direction, volume.language, novel.language],
   );
+  /** جهت مؤثر برای استفاده در callbackها بدون وابستگی بازسازی */
+  const directionRef = useRef(direction);
+  directionRef.current = direction;
 
   const isScrolled = settings.readingMode === 'scrolled';
 
@@ -170,7 +175,7 @@ export default function EpubReader(props: EpubReaderProps) {
         FONT_BASE_CSS +
         customFontFaceCss(customFonts) +
         themeCss(s) +
-        settingsOverrideCss(s, customFonts);
+        settingsOverrideCss(s, customFonts, directionRef.current);
       cssRef.current += `\nhtml { font-size: ${s.fontSize}%; }`;
       contentsRef.current.forEach((c) => injectStyleIntoDoc(c.document, cssRef.current));
     },
@@ -701,7 +706,7 @@ export default function EpubReader(props: EpubReaderProps) {
   };
 
   /* ---------- رندر ---------- */
-  const percentLabel = `${Math.round(percentage * 100)}٪`;
+  const percentLabel = faDigits(Math.round(percentage * 100)) + '٪';
   const pal = useMemo(() => effectivePalette(settings), [settings.theme, settings.textColor, settings.bgColor, settings.bgImageOpacity]);
 
   const shellVars = {
@@ -817,7 +822,7 @@ export default function EpubReader(props: EpubReaderProps) {
         {status === 'error' && (
           <div className="reader-load">
             <div className="inner">
-              <div style={{ fontSize: '2.2rem' }}>📖</div>
+              <BookOpen size={34} aria-hidden="true" style={{ color: 'var(--reader-muted)' }} />
               <strong>بازکردن کتاب ناموفق بود</strong>
               <p style={{ color: 'var(--reader-muted)', fontSize: '0.9rem', margin: 0 }}>
                 {errorMsg || 'فایل EPUB قابل خواندن نیست.'}
@@ -852,7 +857,7 @@ export default function EpubReader(props: EpubReaderProps) {
               </>
             ) : (
               <>
-                <CheckCircle2 size={16} /> پایان این جلد — بازگشت به کتاب
+                <CheckCircle2 size={16} /> پایان این جلد؛ بازگشت به کتاب
               </>
             )
           ) : (
@@ -942,7 +947,7 @@ export default function EpubReader(props: EpubReaderProps) {
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && void jumpTo(item.href)}
               >
-                <span className="idx">{i + 1}</span>
+                <span className="idx">{faDigits(i + 1)}</span>
                 {item.title}
               </div>
             ))}
@@ -977,7 +982,7 @@ export default function EpubReader(props: EpubReaderProps) {
               <div key={b.id} className="bookmark-item">
                 <div className="bi-label" onClick={() => void jumpTo(b.cfi)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && void jumpTo(b.cfi)}>
                   <div className="l">{b.label}</div>
-                  <div className="d">{new Date(b.createdAt).toLocaleString('fa-IR')}</div>
+                  <div className="d">{new Date(b.createdAt).toLocaleDateString('fa-IR')} · {new Date(b.createdAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
                 <button type="button" className="del" aria-label="حذف نشانک" onClick={() => onDeleteBookmark(b.id)}>
                   <X size={15} />

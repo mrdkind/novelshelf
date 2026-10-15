@@ -200,10 +200,25 @@ export function registerCustomFontsInDocument(customFonts: CustomFont[]): void {
 
 /* ---------------- CSS اعمال تنظیمات ---------------- */
 
-/** CSS اعمال تنظیمات (فونت، فاصله‌ها، ترازبندی، رنگ سفارشی) */
-export function settingsOverrideCss(s: ReaderSettings, customFonts: CustomFont[] = []): string {
+/** CSS اعمال تنظیمات (جهت، فونت، فاصله‌ها، ترازبندی، رنگ سفارشی)
+ *
+ * ⚠️ ریشه‌یابی باگ «متن از سمت چپ صفحه شروع می‌شود»:
+ * epub.js جهت (direction) را فقط روی پوسته بیرونی (container) برای محاسبه
+ * اسکرول/ستون اعمال می‌کند و هرگز روی سند محتوا (html/body داخل iframe) نمی‌گذارد.
+ * نتیجه: کتاب‌های فارسیِ ساخته‌شده با نشانه‌گذاری LTR، حروفشان درست شکل می‌گیرد
+ * (الگوریتم BiDi) اما بلوک متن از لبه چپ چیده می‌شود. راه‌حل: تزریق مستقیم
+ * direction در CSS سند کتاب. */
+export function settingsOverrideCss(
+  s: ReaderSettings,
+  customFonts: CustomFont[] = [],
+  direction: 'rtl' | 'ltr' = 'rtl',
+): string {
   const scrolled = s.readingMode === 'scrolled';
-  const lines: string[] = ['body {'];
+  const lines: string[] = [];
+  /* جهت پایه سند کتاب — ارجاع به تنظیم کاربر بر جهت metadata کتاب.
+   * text-align در بلوک بعدی با !important اعمال می‌شود (start = راست در RTL). */
+  lines.push(`html, body { direction: ${direction} !important; }`);
+  lines.push('body {');
   lines.push(`  line-height: ${s.lineHeight} !important;`);
   lines.push(`  text-align: ${s.textAlign} !important;`);
   lines.push(`  word-spacing: ${s.wordSpacing}px !important;`);

@@ -4,6 +4,7 @@
  */
 
 import { fetchUrl } from './paths';
+import { faDigits } from './persian';
 
 interface CachedEntry {
   buffer: ArrayBuffer;
@@ -82,7 +83,8 @@ export function dropEpub(relPath?: string): void {
 
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes)) return '';
-  if (bytes < 1024) return `${bytes} بایت`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} کیلوبایت`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} مگابایت`;
+  const d = (v: string) => faDigits(v);
+  if (bytes < 1024) return `${d(String(bytes))} بایت`;
+  if (bytes < 1024 * 1024) return `${d((bytes / 1024).toFixed(0))} کیلوبایت`;
+  return `${d((bytes / 1024 / 1024).toFixed(1))} مگابایت`;
 }

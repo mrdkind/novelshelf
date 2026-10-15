@@ -424,8 +424,8 @@ export default function SettingsPage() {
               <option value="sahel">ساحل</option>
               <option value="shabnam">شبنم</option>
               <option value="estedad">استعداد</option>
-              <option value="amiri">امیری — سریف کتابی</option>
-              <option value="naskh">نسخ — سریف</option>
+              <option value="amiri">امیری (سریف کتابی)</option>
+              <option value="naskh">نسخ (سریف)</option>
               <option value="default">فونت خود کتاب</option>
               {personal.customFonts.map((f) => (
                 <option key={f.id} value={`custom:${f.id}`}>
@@ -460,7 +460,7 @@ export default function SettingsPage() {
         <div className="setting-row">
           <div>
             <div className="label">آپلود فونت دلخواه</div>
-            <div className="hint">قالب‌های ttf، otf، woff و woff2 — تا ۶ مگابایت (حداکثر ۱۰ فونت).</div>
+            <div className="hint">قالب‌های ttf، otf، woff و woff2؛ تا ۶ مگابایت (حداکثر ۱۰ فونت).</div>
           </div>
           <div className="control">
             <button type="button" className="btn" onClick={() => fontFileRef.current?.click()}>

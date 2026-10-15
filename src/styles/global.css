@@ -448,6 +448,14 @@ a:hover {
   transition: background-color 0.15s ease, transform 0.1s ease, border-color 0.15s ease, color 0.15s;
   white-space: nowrap;
 }
+
+/* در نمایشگرهای باریک، برچسب بلند دکمه‌ها می‌تواند بشکند تا صفحه سرریز افقی نگیرد */
+@media (max-width: 480px) {
+  .novel-actions .btn {
+    white-space: normal;
+    text-align: center;
+  }
+}
 .btn:hover {
   background: var(--surface-3);
 }
@@ -936,6 +944,11 @@ a:hover {
   background-image: var(--hero-grad);
 }
 
+/* حداقل‌عرض صفر برای ستون‌های grid — جلوگیری از سرریز افقی در موبایل */
+.novel-hero > * {
+  min-width: 0;
+}
+
 @media (max-width: 700px) {
   .novel-hero {
     grid-template-columns: 150px 1fr;
@@ -1364,6 +1377,7 @@ a:hover {
 }
 
 /* ---------- کتاب‌خوان ---------- */
+/* سیستم شعاع کتاب‌خوان (قانون ثابت): کنترل‌ها 12px، پنل‌ها 18px، قرص‌ها 999px */
 .reader-shell {
   position: fixed;
   inset: 0;
@@ -1381,6 +1395,11 @@ a:hover {
   --reader-border: #2a3140;
   --reader-accent: #e2a94f;
   --reader-accent-ink: #241a08;
+  /* سایه رنگ‌شده با رنگ پس‌زمینه — سایه سیاه خالص ممنوع (قانون سلیقه) */
+  --reader-shadow: 0 10px 32px rgba(8, 10, 14, 0.45);
+  --reader-chrome-glass: color-mix(in srgb, var(--reader-chrome) 78%, transparent);
+  --reader-edge: rgba(255, 255, 255, 0.055);
+  --reader-accent-soft: color-mix(in srgb, var(--reader-accent) 15%, transparent);
 }
 
 .reader-shell.theme-light,
@@ -1389,6 +1408,8 @@ a:hover {
 .reader-shell.theme-slate {
   --reader-accent: #8a5508;
   --reader-accent-ink: #fff8ec;
+  --reader-shadow: 0 10px 28px rgba(96, 82, 50, 0.22);
+  --reader-edge: rgba(255, 255, 255, 0.35);
 }
 
 /* علاقه‌مندی تم‌های تیره برای دکمه‌ها */
@@ -1415,6 +1436,22 @@ a:hover {
   border-bottom: 1px solid var(--reader-border);
   flex-wrap: wrap;
   min-height: 52px;
+}
+
+/* پوسته شیشه‌ای — با پشتیبانی‌نشدن blur، رنگ کدر جایگزین می‌شود */
+@supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+  .reader-toolbar,
+  .reader-statusbar {
+    background: var(--reader-chrome-glass);
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  }
+  .reader-toolbar {
+    box-shadow: inset 0 -1px 0 var(--reader-edge);
+  }
+  .reader-statusbar {
+    box-shadow: inset 0 1px 0 var(--reader-edge);
+  }
 }
 
 .reader-toolbar .title {
@@ -1447,12 +1484,12 @@ a:hover {
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: 12px;
   border: none;
   background: transparent;
   color: var(--reader-fg);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
   flex-shrink: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -1463,6 +1500,36 @@ a:hover {
 .reader-statusbar .tbtn:hover,
 .reader-panel .tbtn:hover {
   background: rgba(128, 128, 128, 0.18);
+}
+
+/* بازخورد لمسی: فشار فیزیکی ظریف (قانون سلیقه) */
+.reader-toolbar .tbtn:active,
+.reader-statusbar .tbtn:active,
+.reader-panel .tbtn:active,
+.autoscroll-pill .pill-btn:active {
+  transform: scale(0.94);
+}
+
+/* حلقه فوکوس صفحه‌کلید — برداشتن حلقه فوکوس ممنوع */
+.reader-toolbar .tbtn:focus-visible,
+.reader-statusbar .tbtn:focus-visible,
+.reader-panel .tbtn:focus-visible,
+.autoscroll-pill .pill-btn:focus-visible,
+.next-chapter-btn:focus-visible,
+.reader-panel .panel-content :focus-visible,
+.reader-hint:focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* هدف لمسی ≥ ۴۴px روی دستگاه‌های لمسی */
+@media (pointer: coarse) {
+  .reader-toolbar .tbtn,
+  .reader-statusbar .tbtn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .reader-toolbar .tbtn.active-bookmark {
@@ -1505,7 +1572,7 @@ a:hover {
   inset-inline-start: 0;
   top: 0;
   bottom: 0;
-  background: var(--reader-accent);
+  background: linear-gradient(to left, color-mix(in srgb, var(--reader-accent) 70%, transparent), var(--reader-accent));
   transition: width 0.25s ease;
 }
 
@@ -1566,17 +1633,18 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.1rem;
-  border: 1px solid var(--reader-border);
+  padding: 0.7rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--reader-accent) 62%, var(--reader-border));
   border-radius: 999px;
-  background: var(--reader-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--reader-accent) 88%, #fff 12%), var(--reader-accent));
   color: var(--reader-accent-ink);
   font-weight: 700;
   font-size: 0.9rem;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-  animation: riseIn 0.25s ease;
+  box-shadow: var(--reader-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: riseIn 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  transition: transform 0.15s ease, filter 0.15s ease;
   touch-action: manipulation;
   max-width: min(88vw, 420px);
   white-space: nowrap;
@@ -1589,7 +1657,12 @@ a:hover {
 }
 
 .next-chapter-btn:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.07);
+  transform: translateX(50%) translateY(-1px);
+}
+
+.next-chapter-btn:active {
+  transform: translateX(50%) scale(0.97);
 }
 
 @keyframes riseIn {
@@ -1618,7 +1691,7 @@ a:hover {
   border-radius: 999px;
   background: var(--reader-chrome);
   color: var(--reader-fg);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--reader-shadow);
   animation: fadeIn 0.2s ease;
 }
 
@@ -1668,11 +1741,13 @@ a:hover {
   background: var(--reader-chrome);
   color: var(--reader-fg);
   border-inline-start: 1px solid var(--reader-border);
+  border-start-start-radius: 18px;
+  border-end-start-radius: 18px;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-2);
-  animation: panelIn 0.2s ease;
+  box-shadow: var(--reader-shadow);
+  animation: panelIn 0.22s cubic-bezier(0.25, 0.9, 0.3, 1.05);
   overscroll-behavior: contain;
 }
 
@@ -1702,6 +1777,30 @@ a:hover {
   gap: 0.5rem;
 }
 
+/* خروجی اسلایدرها وقتی کنترل غیرفعال است */
+.slider-row output.off,
+.rsp-group output.off {
+  opacity: 0.4;
+}
+
+/* احترام به کاهش حرکت — الزام دسترس‌پذیری */
+@media (prefers-reduced-motion: reduce) {
+  .next-chapter-btn,
+  .autoscroll-pill,
+  .reader-panel {
+    animation: none;
+  }
+  .reader-toolbar .tbtn,
+  .reader-statusbar .tbtn,
+  .reader-panel .tbtn,
+  .next-chapter-btn,
+  .toc-item,
+  .seg-btn,
+  .bookmark-item {
+    transition: none;
+  }
+}
+
 .reader-panel .panel-close {
   margin-inline-start: auto;
 }
@@ -1723,7 +1822,8 @@ a:hover {
   cursor: pointer;
   color: var(--reader-fg);
   font-size: 0.88rem;
-  transition: background-color 0.15s ease;
+  border-inline-start: 3px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .toc-item:hover {
@@ -1731,9 +1831,10 @@ a:hover {
 }
 
 .toc-item.current {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--reader-accent-soft);
+  color: var(--reader-accent);
   font-weight: 700;
+  border-inline-start-color: var(--reader-accent);
 }
 
 .toc-item .idx {
@@ -1743,7 +1844,7 @@ a:hover {
 
 .setting-slider {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--reader-accent);
 }
 
 .setting-group {
@@ -1780,9 +1881,9 @@ a:hover {
 }
 
 .seg-btn.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--reader-accent);
+  border-color: var(--reader-accent);
+  color: var(--reader-accent-ink);
   font-weight: 700;
 }
 
