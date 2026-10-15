@@ -7,21 +7,30 @@ import {
   Bookmark as BookmarkIcon,
   BookmarkPlus,
   Check,
+  CheckCircle2,
+  ChevronLeft,
   List,
   Maximize,
   Minimize,
+  Pause,
+  Play,
   RotateCcw,
   Settings2,
+  SkipForward,
   X,
+  XCircle,
 } from 'lucide-react';
-import type { Bookmark, Novel, ReaderSettings, Volume } from '@/types';
+import type { Bookmark, CustomFont, Novel, ReaderSettings, Volume } from '@/types';
 import { loadEpub, formatBytes } from '@/services/epubLoader';
 import {
+  customFontFaceCss,
   effectiveDirection,
+  effectivePalette,
+  FONT_BASE_CSS,
   settingsOverrideCss,
   themeCss,
-  FONT_BASE_CSS,
 } from './readerSettings';
+import ReaderSettingsPanel from './ReaderSettingsPanel';
 import { InlineSpinner } from '@/components/StateBoxes';
 
 interface EpubReaderProps {
@@ -33,10 +42,16 @@ interface EpubReaderProps {
   initialHref: string | null;
   savedPercentage: number | null;
   bookmarks: Bookmark[];
+  customFonts: CustomFont[];
+  onAddCustomFont: (f: Omit<CustomFont, 'id' | 'createdAt'>) => Promise<CustomFont>;
+  onDeleteCustomFont: (id: string) => Promise<void>;
   onAddBookmark: (label: string, cfi: string, href: string) => void;
   onDeleteBookmark: (id: string) => void;
   onProgress: (p: { cfi: string; href: string; chapterTitle: string; percentage: number }) => void;
   onChapterRead: (href: string) => void;
+  onNextVolume: () => void;
+  nextVolumeTitle: string | null;
+  hasNextVolume: boolean;
   onExit: () => void;
 }
 
@@ -80,22 +95,29 @@ export default function EpubReader(props: EpubReaderProps) {
     onSettingsChange,
     savedPercentage,
     bookmarks,
+    customFonts,
+    onAddCustomFont,
+    onDeleteCustomFont,
     onAddBookmark,
     onDeleteBookmark,
     onProgress,
     onChapterRead,
+    onNextVolume,
+    nextVolumeTitle,
+    hasNextVolume,
     onExit,
   } = props;
 
   const shellRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
   const lastCfiRef = useRef<string | null>(null);
   const lastHrefRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locationsStartedRef = useRef(false);
-  /** نقطه شروع برای بازسازی‌های بعدی (مثل تغییر حالت نمایش) — با هر جابه‌جایی به‌روز می‌شود */
+  /** نقطه شروع برای بازسازی‌های بعدی (مثل تغییر جهت/حالت نمایش) — با هر جابه‌جایی به‌روز می‌شود */
   const resumeCfiRef = useRef<string | null>(props.initialCfi);
   const resumeHrefRef = useRef<string | null>(props.initialHref);
 
@@ -110,16 +132,21 @@ export default function EpubReader(props: EpubReaderProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  /** رسیدن به انتهای فصل جاری (برای نمایش دکمه فصل/جلد بعدی) */
+  const [chapterEnd, setChapterEnd] = useState(false);
+  const [isLastSection, setIsLastSection] = useState(false);
+  const [autoPaused, setAutoPaused] = useState(false);
 
   const direction = useMemo(
     () => effectiveDirection(settings, volume.language ?? novel.language),
     [settings.direction, volume.language, novel.language],
   );
 
+  const isScrolled = settings.readingMode === 'scrolled';
+
   /* ---------- اعمال تنظیمات ظاهری روی rendition ----------
    * epub.js هوک inject خودش تم‌های سریال‌شده (رشته CSS) را نادیده می‌گیرد؛
    * بنابراین CSS را مستقیماً در سند هر بخش تزریق می‌کنیم. */
-  const themeCounterRef = useRef(0);
   const cssRef = useRef('');
   const contentsRef = useRef<Set<Contents>>(new Set());
 
@@ -139,15 +166,18 @@ export default function EpubReader(props: EpubReaderProps) {
 
   const applyVisuals = useCallback(
     (s: ReaderSettings) => {
-      themeCounterRef.current += 1;
-      cssRef.current = FONT_BASE_CSS + themeCss(s.theme) + settingsOverrideCss(s);
+      cssRef.current =
+        FONT_BASE_CSS +
+        customFontFaceCss(customFonts) +
+        themeCss(s) +
+        settingsOverrideCss(s, customFonts);
       cssRef.current += `\nhtml { font-size: ${s.fontSize}%; }`;
       contentsRef.current.forEach((c) => injectStyleIntoDoc(c.document, cssRef.current));
     },
-    [injectStyleIntoDoc],
+    [customFonts, injectStyleIntoDoc],
   );
 
-  /* ---------- ساخت و نمایش کتاب (با تغییر حالت نمایش از نو ساخته می‌شود) ---------- */
+  /* ---------- ساخت و نمایش کتاب (با تغییر حالت نمایش یا جهت از نو ساخته می‌شود) ---------- */
   useEffect(() => {
     let destroyed = false;
     let abort: AbortController | null = new AbortController();
@@ -170,17 +200,22 @@ export default function EpubReader(props: EpubReaderProps) {
         if (!host) return;
         host.innerHTML = '';
 
-        const isScrolled = settings.readingMode === 'scrolled';
         const rendition = book.renderTo(host, {
           width: '100%',
           height: isScrolled ? 'auto' : '100%',
           flow: isScrolled ? 'scrolled-doc' : 'paginated',
           manager: 'default',
+          /* نکته مهم epub.js: کانستراکتور جهت را با metadata کتاب بازنویسی می‌کند و
+           * نام گزینه «defaultDirection» است؛ هر دو را پاس می‌دهیم و بعد از ساخت
+           * نیز rendition.direction() را صریحاً فراخوانی می‌کنیم تا انتخاب کاربر
+           * همیشه بر جهت metadata کتاب برتری داشته باشد (رفع باگ «RTL کار نمی‌کند»). */
           direction,
+          defaultDirection: direction,
           allowScriptedContent: false,
           spread: 'auto',
           minSpreadWidth: 780,
         });
+        rendition.direction(direction);
         renditionRef.current = rendition;
 
         /* --- امنیت، رفتار لینک‌ها/تصاویر و تزریق تم در محتوای کتاب --- */
@@ -237,12 +272,20 @@ export default function EpubReader(props: EpubReaderProps) {
           );
         });
 
-        /* --- ردیابی پیشرفت --- */
+        /* --- ردیابی پیشرفت و تشخیص انتهای فصل --- */
         rendition.on('relocated', (locationArg: unknown) => {
           const loc = locationArg as {
-            start?: { href?: string; index?: number; percentage?: number; cfi?: string };
+            start?: {
+              href?: string;
+              index?: number;
+              percentage?: number;
+              cfi?: string;
+              displayed?: { page?: number; total?: number };
+            };
+            end?: { displayed?: { page?: number; total?: number }; index?: number };
             at?: string;
             cfi?: string;
+            atEnd?: boolean;
           };
           const cfi: string | undefined = loc?.start?.cfi ?? loc?.at ?? loc?.cfi ?? lastCfiRef.current ?? undefined;
           const href = loc?.start?.href ?? null;
@@ -270,6 +313,23 @@ export default function EpubReader(props: EpubReaderProps) {
           if (href) resumeHrefRef.current = href;
 
           setPercentage(pct);
+
+          /* --- تشخیص انتهای فصل (حالت صفحه‌بندی‌شده) ---
+           * displayed.page === displayed.total یعنی آخرین صفحه فصل جاری */
+          const disp = loc?.end?.displayed ?? loc?.start?.displayed;
+          const page = disp?.page ?? 0;
+          const pageTotal = disp?.total ?? 0;
+          const atSectionEnd = pageTotal > 0 && page >= pageTotal;
+          const spineItems = bookRef.current?.spine.items ?? [];
+          const startIndex = loc?.start?.index ?? -1;
+          const last = spineItems.length > 0 && startIndex >= spineItems.length - 1;
+          if (isScrolled) {
+            // در حالت پیمایشی، اسکرول به ته ظرف تشخیص داده می‌شود (listener جداگانه)
+            setIsLastSection(last);
+          } else {
+            setChapterEnd(Boolean(atSectionEnd) || Boolean(loc?.atEnd));
+            setIsLastSection(last);
+          }
 
           // عنوان فصل جاری از TOC خود کتاب یا کاتالوگ
           if (href) {
@@ -321,11 +381,9 @@ export default function EpubReader(props: EpubReaderProps) {
         if (!locationsStartedRef.current && volume.spineCount <= 220) {
           locationsStartedRef.current = true;
           setTimeout(() => {
-            book.locations
+            bookRef.current?.locations
               .generate(1100)
-              .then(() => {
-                // پس از آماده‌شدن مکان‌ها، درصد بعدی جابه‌جایی دقیق می‌شود
-              })
+              .then(() => {})
               .catch(() => {});
           }, 1400);
         }
@@ -358,14 +416,14 @@ export default function EpubReader(props: EpubReaderProps) {
         /* ignore */
       }
     };
-    // توجه: تغییر readingMode باعث بازسازی کامل می‌شود (سازگاری بر ظاهر ترجیح داده شده)
+    // توجه: تغییر readingMode و direction باعث بازسازی کامل می‌شود (سازگاری بر ظاهر ترجیح داده شده)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [volume.file, settings.readingMode]);
+  }, [volume.file, settings.readingMode, direction]);
 
   /* ---------- باز اعمال تنظیمات ظاهری بدون بازسازی ---------- */
   useEffect(() => {
     applyVisuals(settings);
-  }, [settings.theme, settings.fontSize, settings.lineHeight, settings.paragraphSpacing, settings.fontFamily, settings.textAlign, settings.pageMargin, settings.readingMode, applyVisuals, settings]);
+  }, [settings, applyVisuals]);
 
   useEffect(() => {
     setChromeVisible(settings.showToolbar);
@@ -451,6 +509,93 @@ export default function EpubReader(props: EpubReaderProps) {
     }
   }, []);
 
+  /* ---------- دکمه فصل/جلد بعدی در انتهای فصل ---------- */
+  const handleNextChapter = useCallback(() => {
+    setPanel('none');
+    if (isLastSection) {
+      flushSave();
+      onNextVolume();
+    } else {
+      goNext();
+    }
+  }, [isLastSection, flushSave, onNextVolume, goNext]);
+
+  /* ---------- تشخیص انتهای فصل در حالت پیمایشی (اسکرول به ته) ---------- */
+  useEffect(() => {
+    if (!isScrolled || status !== 'ready') return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 72;
+      setChapterEnd(atBottom);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isScrolled, status, currentChapter]);
+
+  /* ---------- اسکرول خودکار ---------- */
+  const autoPausedRef = useRef(false);
+  autoPausedRef.current = autoPaused;
+  const lastInteractionRef = useRef(0);
+
+  useEffect(() => {
+    if (!settings.autoScroll || status !== 'ready') return;
+
+    // حالت پیمایشی: پیمایش نرم پیکسلی
+    if (isScrolled) {
+      let raf = 0;
+      let last = performance.now();
+      const tick = (now: number) => {
+        raf = requestAnimationFrame(tick);
+        const el = scrollContainerRef.current;
+        if (!el) return;
+        const dt = Math.min(0.1, (now - last) / 1000);
+        last = now;
+        // توقف موقت هنگام تعامل کاربر یا باز بودن پنل یا توقف دستی
+        const idle = now - lastInteractionRef.current > 3500;
+        if (autoPausedRef.current || panel !== 'none' || !idle) return;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
+        if (atBottom) return;
+        el.scrollTop += settings.autoScrollSpeed * dt;
+      };
+      raf = requestAnimationFrame(tick);
+
+      const markInteraction = () => {
+        lastInteractionRef.current = performance.now();
+      };
+      const el = scrollContainerRef.current;
+      el?.addEventListener('touchstart', markInteraction, { passive: true });
+      el?.addEventListener('wheel', markInteraction, { passive: true });
+      el?.addEventListener('pointerdown', markInteraction);
+      return () => {
+        cancelAnimationFrame(raf);
+        el?.removeEventListener('touchstart', markInteraction);
+        el?.removeEventListener('wheel', markInteraction);
+        el?.removeEventListener('pointerdown', markInteraction);
+      };
+    }
+
+    // حالت صفحه‌بندی‌شده: ورق‌زدن خودکار
+    const intervalMs = Math.max(4000, 150_000 / Math.max(1, settings.autoScrollSpeed));
+    const timer = setInterval(() => {
+      if (autoPausedRef.current || panel !== 'none') return;
+      const now = performance.now();
+      if (now - lastInteractionRef.current < 6000) return;
+      goNext();
+    }, intervalMs);
+    const markInteraction = () => {
+      lastInteractionRef.current = performance.now();
+    };
+    window.addEventListener('touchstart', markInteraction, { passive: true });
+    window.addEventListener('wheel', markInteraction, { passive: true });
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('touchstart', markInteraction);
+      window.removeEventListener('wheel', markInteraction);
+    };
+  }, [settings.autoScroll, settings.autoScrollSpeed, isScrolled, status, panel, goNext]);
+
   /* ---------- کلیدهای میان‌بر ---------- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -535,7 +680,7 @@ export default function EpubReader(props: EpubReaderProps) {
     onAddBookmark(label, cfi, lastHrefRef.current ?? '');
   }, [currentChapter, percentage, onAddBookmark]);
 
-  /* ---------- لمس و کشیدن ---------- */
+  /* ---------- لمس و کشیدن (فقط حالت صفحه‌بندی‌شده) ---------- */
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -557,9 +702,25 @@ export default function EpubReader(props: EpubReaderProps) {
 
   /* ---------- رندر ---------- */
   const percentLabel = `${Math.round(percentage * 100)}٪`;
+  const pal = useMemo(() => effectivePalette(settings), [settings.theme, settings.textColor, settings.bgColor, settings.bgImageOpacity]);
+
+  const shellVars = {
+    '--reader-bg': pal.bg,
+    '--reader-chrome': pal.chrome,
+    '--reader-fg': pal.fg,
+    '--reader-muted': pal.muted,
+    '--reader-border': pal.border,
+    ...(settings.bgImageUrl
+      ? {
+          backgroundImage: `url(${settings.bgImageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }
+      : {}),
+  } as React.CSSProperties;
 
   return (
-    <div className={`reader-shell theme-${settings.theme}`} ref={shellRef} dir="rtl">
+    <div className={`reader-shell theme-${settings.theme}`} style={shellVars} ref={shellRef} dir="rtl">
       {/* نوار بالایی */}
       {chromeVisible && (
         <div className="reader-toolbar">
@@ -603,32 +764,35 @@ export default function EpubReader(props: EpubReaderProps) {
       )}
 
       {/* بدنه کتاب */}
-      <div className={`reader-body ${settings.readingMode === 'scrolled' ? '' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="reader-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div
-          className={`reader-container ${settings.readingMode === 'scrolled' ? 'scrolled' : ''}`}
-          style={settings.readingMode === 'scrolled' ? { paddingBlock: '1rem' } : undefined}
+          ref={scrollContainerRef}
+          className={`reader-container ${isScrolled ? 'scrolled' : ''}`}
+          style={isScrolled ? { paddingBlock: '1rem' } : undefined}
         >
           <div
             ref={hostRef}
             className="rendition-host"
-            style={settings.readingMode === 'scrolled' ? { width: '100%' } : { height: '100%', width: '100%' }}
+            style={isScrolled ? { width: '100%' } : { height: '100%', width: '100%' }}
           />
         </div>
 
         {/* نواحی لمسی — فقط حالت صفحه‌بندی‌شده */}
+        {/* منطق فیزیکی کتاب: جهت خواندن به سمت inline-end است؛
+            بنابراین لبه inline-end = بعدی، لبه inline-start = قبلی */}
         {settings.readingMode === 'paginated' && status === 'ready' && (
           <>
             <button
               type="button"
-              className="tap-zone left"
-              aria-label={direction === 'rtl' ? 'بعدی' : 'قبلی'}
-              onClick={() => (direction === 'rtl' ? goNext() : goPrev())}
+              className="tap-zone start"
+              aria-label="قبلی"
+              onClick={goPrev}
             />
             <button
               type="button"
-              className="tap-zone right"
-              aria-label={direction === 'rtl' ? 'قبلی' : 'بعدی'}
-              onClick={() => (direction === 'rtl' ? goPrev() : goNext())}
+              className="tap-zone end"
+              aria-label="بعدی"
+              onClick={goNext}
             />
           </>
         )}
@@ -678,11 +842,58 @@ export default function EpubReader(props: EpubReaderProps) {
         )}
       </div>
 
+      {/* دکمه فصل/جلد بعدی — در هر دو حالت پنهان/نمایانِ کنترل‌ها دیده می‌شود */}
+      {status === 'ready' && chapterEnd && panel === 'none' && (
+        <button type="button" className={`next-chapter-btn ${chromeVisible ? 'with-chrome' : ''}`} onClick={handleNextChapter}>
+          {isLastSection ? (
+            hasNextVolume ? (
+              <>
+                <SkipForward size={16} /> جلد بعدی: {nextVolumeTitle}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={16} /> پایان این جلد — بازگشت به کتاب
+              </>
+            )
+          ) : (
+            <>
+              <SkipForward size={16} /> فصل بعدی
+            </>
+          )}
+        </button>
+      )}
+
+      {/* نشانگر اسکرول خودکار */}
+      {status === 'ready' && settings.autoScroll && isScrolled && (
+        <div
+          className={`autoscroll-pill ${chromeVisible ? 'with-chrome' : ''} ${chapterEnd ? 'stacked' : ''}`}
+        >
+          <button
+            type="button"
+            className="pill-btn"
+            onClick={() => setAutoPaused((p) => !p)}
+            aria-label={autoPaused ? 'ادامه اسکرول خودکار' : 'توقف موقت اسکرول خودکار'}
+          >
+            {autoPaused ? <Play size={14} /> : <Pause size={14} />}
+            <span>{autoPaused ? 'ادامه' : 'توقف'}</span>
+          </button>
+          <button
+            type="button"
+            className="pill-btn stop"
+            onClick={() => onSettingsChange({ ...settings, autoScroll: false })}
+            aria-label="خاموش‌کردن اسکرول خودکار"
+          >
+            <XCircle size={14} />
+          </button>
+        </div>
+      )}
+
       {/* نوار وضعیت و پرش */}
       {chromeVisible && (
         <div className="reader-statusbar">
-          <button type="button" className="tbtn" onClick={goPrev} aria-label="قبلی" title="قبلی">
-            <ArrowRight size={18} style={{ transform: direction === 'rtl' ? 'none' : 'scaleX(-1)' }} />
+          {/* بر اساس درخواست کاربر: فلش راست‌نما = بعدی، فلش چپ‌نما = قبلی */}
+          <button type="button" className="tbtn" onClick={goNext} aria-label="بعدی" title="بعدی">
+            <ChevronLeft size={20} style={{ transform: 'scaleX(-1)' }} />
           </button>
           <input
             type="range"
@@ -697,14 +908,14 @@ export default function EpubReader(props: EpubReaderProps) {
             }}
           />
           <span className="pct">{percentLabel}</span>
-          <button type="button" className="tbtn" onClick={goNext} aria-label="بعدی" title="بعدی">
-            <ArrowRight size={18} style={{ transform: direction === 'rtl' ? 'scaleX(-1)' : 'none' }} />
+          <button type="button" className="tbtn" onClick={goPrev} aria-label="قبلی" title="قبلی">
+            <ChevronLeft size={20} />
           </button>
         </div>
       )}
 
       {/* راهنمای مخفی‌کردن کنترل‌ها */}
-      {status === 'ready' && !chromeVisible && (
+      {status === 'ready' && !chromeVisible && !chapterEnd && (
         <button type="button" className="reader-hint" onClick={() => setChromeVisible(true)}>
           نمایش کنترل‌ها (H)
         </button>
@@ -777,9 +988,9 @@ export default function EpubReader(props: EpubReaderProps) {
         </aside>
       )}
 
-      {/* ---------- پنل تنظیمات ---------- */}
+      {/* ---------- پنل تنظیمات (بازطراحی کامل) ---------- */}
       {panel === 'settings' && (
-        <aside className="reader-panel" aria-label="تنظیمات نمایش">
+        <aside className="reader-panel wide" aria-label="تنظیمات نمایش">
           <h3>
             <Settings2 size={17} /> تنظیمات نمایش
             <button type="button" className="tbtn panel-close" onClick={() => setPanel('none')} aria-label="بستن">
@@ -787,148 +998,38 @@ export default function EpubReader(props: EpubReaderProps) {
             </button>
           </h3>
           <div className="panel-content">
-            <div className="setting-group">
-              <div className="glabel">تم مطالعه</div>
-              <div className="seg-group">
-                {(['dark', 'light', 'sepia'] as const).map((t) => (
-                  <button key={t} type="button" className={`seg-btn ${settings.theme === t ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, theme: t })}>
-                    {t === 'dark' ? 'تاریک' : t === 'light' ? 'روشن' : 'سپیا'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">حالت نمایش</div>
-              <div className="seg-group">
-                <button type="button" className={`seg-btn ${settings.readingMode === 'paginated' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, readingMode: 'paginated' })}>
-                  صفحه‌بندی‌شده
-                </button>
-                <button type="button" className={`seg-btn ${settings.readingMode === 'scrolled' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, readingMode: 'scrolled' })}>
-                  پیمایشی
-                </button>
-              </div>
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">اندازه فونت ({settings.fontSize}٪)</div>
-              <input
-                type="range"
-                className="setting-slider"
-                min={70}
-                max={220}
-                step={5}
-                value={settings.fontSize}
-                onChange={(e) => onSettingsChange({ ...settings, fontSize: Number(e.target.value) })}
-                aria-label="اندازه فونت"
-              />
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">فاصله خطوط ({settings.lineHeight.toFixed(1)})</div>
-              <input
-                type="range"
-                className="setting-slider"
-                min={1.3}
-                max={2.6}
-                step={0.1}
-                value={settings.lineHeight}
-                onChange={(e) => onSettingsChange({ ...settings, lineHeight: Number(e.target.value) })}
-                aria-label="فاصله خطوط"
-              />
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">فاصله پاراگراف‌ها ({settings.paragraphSpacing.toFixed(1)}em)</div>
-              <input
-                type="range"
-                className="setting-slider"
-                min={0}
-                max={2}
-                step={0.1}
-                value={settings.paragraphSpacing}
-                onChange={(e) => onSettingsChange({ ...settings, paragraphSpacing: Number(e.target.value) })}
-                aria-label="فاصله پاراگراف‌ها"
-              />
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">عرض ستون متن {settings.readingMode === 'paginated' ? '(در حالت پیمایشی اعمال می‌شود)' : `(${settings.maxWidth}rem)`}</div>
-              <input
-                type="range"
-                className="setting-slider"
-                min={28}
-                max={70}
-                step={2}
-                value={settings.maxWidth}
-                onChange={(e) => onSettingsChange({ ...settings, maxWidth: Number(e.target.value) })}
-                aria-label="عرض ستون متن"
-              />
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">حاشیه صفحه {settings.readingMode === 'paginated' ? '(در حالت پیمایشی اعمال می‌شود)' : `(${settings.pageMargin}px)`}</div>
-              <input
-                type="range"
-                className="setting-slider"
-                min={0}
-                max={72}
-                step={4}
-                value={settings.pageMargin}
-                onChange={(e) => onSettingsChange({ ...settings, pageMargin: Number(e.target.value) })}
-                aria-label="حاشیه صفحه"
-              />
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">جهت متن</div>
-              <div className="seg-group">
-                <button type="button" className={`seg-btn ${settings.direction === 'auto' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, direction: 'auto' })}>
-                  خودکار
-                </button>
-                <button type="button" className={`seg-btn ${settings.direction === 'rtl' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, direction: 'rtl' })}>
-                  راست‌به‌چپ
-                </button>
-                <button type="button" className={`seg-btn ${settings.direction === 'ltr' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, direction: 'ltr' })}>
-                  چپ‌به‌راست
-                </button>
-              </div>
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">ترازبندی متن</div>
-              <div className="seg-group">
-                {(['justify', 'start', 'center'] as const).map((a) => (
-                  <button key={a} type="button" className={`seg-btn ${settings.textAlign === a ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, textAlign: a })}>
-                    {a === 'justify' ? 'هم‌تراز' : a === 'start' ? 'ابتدای سطر' : 'وسط'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">فونت</div>
-              <div className="seg-group">
-                <button type="button" className={`seg-btn ${settings.fontFamily === 'default' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, fontFamily: 'default' })}>
-                  فونت کتاب
-                </button>
-                <button type="button" className={`seg-btn ${settings.fontFamily === 'vazirmatn' ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, fontFamily: 'vazirmatn' })}>
-                  وزیرمتن
-                </button>
-              </div>
-            </div>
-
-            <div className="setting-group">
-              <div className="glabel">نوار ابزار</div>
-              <div className="seg-group">
-                <button type="button" className={`seg-btn ${settings.showToolbar ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, showToolbar: true })}>
-                  نمایش دائمی
-                </button>
-                <button type="button" className={`seg-btn ${!settings.showToolbar ? 'on' : ''}`} onClick={() => onSettingsChange({ ...settings, showToolbar: false })}>
-                  شروع مخفی
-                </button>
-              </div>
-            </div>
+            <ReaderSettingsPanel
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              customFonts={customFonts}
+              onAddCustomFont={onAddCustomFont}
+              onDeleteCustomFont={onDeleteCustomFont}
+              isScrolled={isScrolled}
+              onReset={() => {
+                onSettingsChange({
+                  ...settings,
+                  theme: 'dark',
+                  fontSize: 100,
+                  lineHeight: 1.8,
+                  paragraphSpacing: 0.8,
+                  wordSpacing: 0,
+                  fontFamily: 'vazirmatn',
+                  customFontId: null,
+                  maxWidth: 42,
+                  pageMargin: 24,
+                  textAlign: 'justify',
+                  direction: 'rtl',
+                  readingMode: 'scrolled',
+                  textColor: null,
+                  bgColor: null,
+                  bgImageUrl: null,
+                  bgImageOpacity: 0.35,
+                  autoScroll: false,
+                  autoScrollSpeed: 40,
+                });
+                setPanel('none');
+              }}
+            />
           </div>
         </aside>
       )}

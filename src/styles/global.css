@@ -3,7 +3,7 @@
    تم تاریک پیش‌فرض + تم روشن | RTL | فونت وزیرمتن (محلی)
    ============================================================ */
 
-/* ---------- فونت محلی وزیرمتن ---------- */
+/* ---------- فونت‌های محلی ---------- */
 @font-face {
   font-family: 'Vazirmatn';
   src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2');
@@ -32,6 +32,60 @@
   font-family: 'Vazirmatn';
   src: url('/fonts/Vazirmatn-ExtraBold.woff2') format('woff2');
   font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Shabnam';
+  src: url('/fonts/Shabnam-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Shabnam';
+  src: url('/fonts/Shabnam-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Estedad';
+  src: url('/fonts/Estedad-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Estedad';
+  src: url('/fonts/Estedad-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Amiri';
+  src: url('/fonts/Amiri-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Amiri';
+  src: url('/fonts/Amiri-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  src: url('/fonts/NotoNaskh-Regular.woff2') format('woff2');
+  font-weight: 400 700;
   font-display: swap;
 }
 
@@ -1317,30 +1371,37 @@ a:hover {
   display: flex;
   flex-direction: column;
   background: var(--reader-bg, #14161b);
-}
-
-.reader-shell.theme-dark {
+  background-size: cover;
+  background-position: center;
+  /* رنگ‌های پیش‌فرض (تم تاریک) — با تم انتخابی از طریق style درون‌خطی بازنویسی می‌شود */
   --reader-bg: #14161b;
   --reader-chrome: #1a1e26;
   --reader-fg: #d9dde5;
   --reader-muted: #8b93a5;
   --reader-border: #2a3140;
+  --reader-accent: #e2a94f;
+  --reader-accent-ink: #241a08;
 }
 
-.reader-shell.theme-light {
-  --reader-bg: #fbf9f4;
-  --reader-chrome: #f2eee3;
-  --reader-fg: #2b2e35;
-  --reader-muted: #777d8a;
-  --reader-border: #ddd6c6;
+.reader-shell.theme-light,
+.reader-shell.theme-sepia,
+.reader-shell.theme-sage,
+.reader-shell.theme-slate {
+  --reader-accent: #8a5508;
+  --reader-accent-ink: #fff8ec;
 }
 
-.reader-shell.theme-sepia {
-  --reader-bg: #f4ecd8;
-  --reader-chrome: #ece2c8;
-  --reader-fg: #4a4234;
-  --reader-muted: #8a7f68;
-  --reader-border: #ddd0b0;
+/* علاقه‌مندی تم‌های تیره برای دکمه‌ها */
+.reader-shell.theme-dark,
+.reader-shell.theme-midnight,
+.reader-shell.theme-mocha,
+.reader-shell.theme-custom {
+  --reader-accent: #e2a94f;
+  --reader-accent-ink: #241a08;
+}
+
+.reader-shell.theme-custom {
+  --reader-accent: #e2a94f;
 }
 
 .reader-toolbar {
@@ -1348,6 +1409,7 @@ a:hover {
   align-items: center;
   gap: 0.4rem;
   padding: 0.45rem 0.7rem;
+  padding-top: calc(0.45rem + env(safe-area-inset-top, 0px));
   background: var(--reader-chrome);
   color: var(--reader-fg);
   border-bottom: 1px solid var(--reader-border);
@@ -1378,27 +1440,33 @@ a:hover {
   flex: 1;
 }
 
-.reader-toolbar .tbtn {
+.reader-toolbar .tbtn,
+.reader-statusbar .tbtn,
+.reader-panel .tbtn {
   display: inline-grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
   border: none;
   background: transparent;
   color: var(--reader-fg);
   cursor: pointer;
   transition: background-color 0.15s ease;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .reader-toolbar .tbtn:hover,
-.reader-toolbar .tbtn.on {
+.reader-toolbar .tbtn.on,
+.reader-statusbar .tbtn:hover,
+.reader-panel .tbtn:hover {
   background: rgba(128, 128, 128, 0.18);
 }
 
 .reader-toolbar .tbtn.active-bookmark {
-  color: var(--accent);
+  color: var(--reader-accent);
 }
 
 .reader-body {
@@ -1417,6 +1485,9 @@ a:hover {
   overflow-x: hidden;
   display: flex;
   justify-content: center;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .reader-container.scrolled .rendition-host {
@@ -1434,7 +1505,7 @@ a:hover {
   inset-inline-start: 0;
   top: 0;
   bottom: 0;
-  background: var(--accent);
+  background: var(--reader-accent);
   transition: width 0.25s ease;
 }
 
@@ -1443,7 +1514,8 @@ a:hover {
   align-items: center;
   gap: 0.8rem;
   padding: 0.4rem 0.9rem;
-  min-height: 44px;
+  padding-bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
+  min-height: 48px;
   background: var(--reader-chrome);
   border-top: 1px solid var(--reader-border);
   color: var(--reader-muted);
@@ -1452,7 +1524,7 @@ a:hover {
 
 .reader-statusbar input[type='range'] {
   flex: 1;
-  accent-color: var(--accent);
+  accent-color: var(--reader-accent);
   direction: ltr;
 }
 
@@ -1462,23 +1534,129 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
-/* نواحی لمسی برای صفحه بعدی/قبلی (فقط حالت صفحه‌بندی‌شده) */
+/* نواحی لمسی برای صفحه بعدی/قبلی (فقط حالت صفحه‌بندی‌شده)
+   منطق فیزیکی کتاب: لبه inline-end (سمت پیشروی خواندن) = بعدی */
 .tap-zone {
   position: absolute;
-  top: 15%;
-  bottom: 15%;
-  width: 26%;
+  top: 12%;
+  bottom: 12%;
+  width: 28%;
   z-index: 5;
   background: transparent;
   border: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.tap-zone.left {
+.tap-zone.start {
   inset-inline-start: 0;
 }
-.tap-zone.right {
+.tap-zone.end {
   inset-inline-end: 0;
+}
+
+/* دکمه شناور فصل/جلد بعدی — در هر دو حالت مخفی/نمایانِ کنترل‌ها دیده می‌شود */
+.next-chapter-btn {
+  position: absolute;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-start: 50%;
+  transform: translateX(50%);
+  z-index: 26;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 999px;
+  background: var(--reader-accent);
+  color: var(--reader-accent-ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  animation: riseIn 0.25s ease;
+  touch-action: manipulation;
+  max-width: min(88vw, 420px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.next-chapter-btn.with-chrome {
+  bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
+}
+
+.next-chapter-btn:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateX(50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(50%) translateY(0);
+  }
+}
+
+/* نشانگر اسکرول خودکار */
+.autoscroll-pill {
+  position: absolute;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-start: 50%;
+  transform: translateX(50%);
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--reader-border);
+  border-radius: 999px;
+  background: var(--reader-chrome);
+  color: var(--reader-fg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.2s ease;
+}
+
+.autoscroll-pill.with-chrome {
+  bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* هنگام نمایش هم‌زمان دکمه فصل بعدی، نشانگر بالای آن قرار می‌گیرد */
+.autoscroll-pill.stacked {
+  bottom: calc(4.4rem + env(safe-area-inset-bottom, 0px));
+}
+
+.autoscroll-pill.with-chrome.stacked {
+  bottom: calc(7.6rem + env(safe-area-inset-bottom, 0px));
+}
+
+.autoscroll-pill .pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--reader-fg);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.autoscroll-pill .pill-btn:hover {
+  background: rgba(128, 128, 128, 0.18);
+}
+
+.autoscroll-pill .pill-btn.stop {
+  color: var(--danger);
 }
 
 /* پنل‌های کشویی کتاب‌خوان */
@@ -1495,6 +1673,11 @@ a:hover {
   flex-direction: column;
   box-shadow: var(--shadow-2);
   animation: panelIn 0.2s ease;
+  overscroll-behavior: contain;
+}
+
+.reader-panel.wide {
+  width: min(400px, 94vw);
 }
 
 @keyframes panelIn {
@@ -1511,6 +1694,7 @@ a:hover {
 .reader-panel h3 {
   margin: 0;
   padding: 0.9rem 1rem;
+  padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
   font-size: 0.98rem;
   border-bottom: 1px solid var(--reader-border);
   display: flex;
@@ -1526,6 +1710,8 @@ a:hover {
   overflow-y: auto;
   padding: 0.6rem;
   flex: 1;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .toc-item {
@@ -1824,4 +2010,508 @@ a:hover {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--surface-3) transparent;
+}
+
+/* ============================================================
+   پنل تنظیمات نو کتاب‌خوان (ReaderSettingsPanel)
+   ============================================================ */
+.rsp {
+  display: flex;
+  flex-direction: column;
+}
+
+.rsp-group {
+  padding: 0.85rem 0.6rem 1rem;
+  border-bottom: 1px dashed var(--reader-border);
+}
+
+.rsp-group.last {
+  border-bottom: none;
+}
+
+.rsp-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--reader-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rsp-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: var(--reader-muted);
+}
+
+/* سواچ تم‌ها */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.45rem;
+}
+
+.theme-swatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  outline: 1px solid rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+  min-height: 64px;
+  transition: transform 0.15s ease, outline-color 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.theme-swatch:hover {
+  transform: translateY(-2px);
+}
+
+.theme-swatch.on {
+  border-color: var(--reader-accent, #e2a94f);
+  outline-color: transparent;
+}
+
+.theme-swatch .ts-a {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.theme-swatch .ts-line {
+  display: block;
+  width: 70%;
+  height: 3px;
+  border-radius: 999px;
+  opacity: 0.75;
+}
+
+.theme-swatch .ts-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.theme-swatch .ts-check {
+  position: absolute;
+  top: 5px;
+  inset-inline-end: 5px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--reader-accent, #e2a94f);
+  color: var(--reader-accent-ink, #241a08);
+}
+
+/* سواچ فشرده در صفحه تنظیمات سایت */
+.theme-swatch.compact {
+  min-height: 56px;
+  padding: 0.5rem 0.55rem;
+}
+
+/* خنثی‌سازی flex والد .control تا گرید تم درست بنشیند */
+.setting-row .control.theme-grid,
+.control.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  width: 100%;
+  flex-wrap: unset;
+}
+
+@media (max-width: 400px) {
+  .control.theme-grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+}
+
+/* انتخاب رنگ */
+.color-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.color-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--reader-muted);
+  cursor: pointer;
+}
+
+.color-pick input[type='color'] {
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--reader-border);
+  border-radius: 8px;
+  background: var(--reader-chrome);
+  cursor: pointer;
+}
+
+/* پیش‌نمایش تصویر پس‌زمینه */
+.bgimg-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bgimg-preview img {
+  width: 100%;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--reader-border);
+}
+
+.bgimg-preview.small {
+  flex-direction: row;
+  align-items: center;
+}
+
+.bgimg-preview.small img {
+  width: 84px;
+  height: 56px;
+}
+
+.bgimg-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.bgimg-actions .seg-btn {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+}
+
+.seg-btn.danger {
+  color: var(--danger);
+  border-color: var(--danger-soft);
+}
+
+.seg-btn.danger:hover {
+  background: var(--danger-soft);
+}
+
+/* ردیف اسلایدر */
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label output'
+    'slider slider';
+  gap: 0.2rem 0.5rem;
+  padding: 0.45rem 0;
+}
+
+.slider-row label {
+  grid-area: label;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--reader-fg);
+}
+
+.slider-row output {
+  grid-area: output;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--reader-muted);
+}
+
+.slider-row input[type='range'] {
+  grid-area: slider;
+  width: 100%;
+  accent-color: var(--reader-accent, #e2a94f);
+  touch-action: none;
+}
+
+/* کارت فونت‌ها */
+.font-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.font-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: 11px;
+  border: 1.5px solid var(--reader-border);
+  background: transparent;
+  color: var(--reader-fg);
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: start;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+.font-card:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.font-card.on {
+  border-color: var(--reader-accent, #e2a94f);
+  background: rgba(226, 169, 79, 0.08);
+}
+
+.font-card .fc-sample {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.14);
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.font-card .fc-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-card .fc-check {
+  color: var(--reader-accent, #e2a94f);
+  display: flex;
+}
+
+.font-card .fc-del {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--reader-muted);
+  cursor: pointer;
+}
+
+.font-card .fc-del:hover {
+  color: var(--danger);
+  background: rgba(239, 100, 97, 0.12);
+}
+
+/* کلیدtoggle ساده داخل پنل */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.45rem 0;
+}
+
+.switch-row label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ns-switch {
+  position: relative;
+  width: 44px;
+  height: 25px;
+  border-radius: 999px;
+  border: 1px solid var(--reader-border);
+  background: rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.ns-switch .knob {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--reader-fg);
+  opacity: 0.7;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.ns-switch[aria-checked='true'] {
+  background: var(--reader-accent, #e2a94f);
+  border-color: var(--reader-accent, #e2a94f);
+}
+
+.ns-switch[aria-checked='true'] .knob {
+  transform: translateX(-19px);
+  opacity: 1;
+  background: var(--reader-accent-ink, #241a08);
+}
+
+.ns-switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   صفحه تنظیمات — کنترل‌های جدید
+   ============================================================ */
+.setting-row.col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.setting-row.muted-row {
+  opacity: 0.55;
+}
+
+.slider-control {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.slider-control input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.slider-control output {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5em;
+  text-align: center;
+}
+
+.toggle-switch.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.font-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip .chip-del {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.1rem;
+}
+
+.chip .chip-del:hover {
+  color: var(--danger);
+}
+
+/* ============================================================
+   نوار ناوبری پایین (فقط موبایل)
+   ============================================================ */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    inset-inline: 0;
+    z-index: 55;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    background: var(--header-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border-soft);
+    padding-block: 0.3rem;
+    padding-bottom: calc(0.3rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 600;
+    min-width: 56px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .bn-item:active {
+    background: var(--surface-2);
+  }
+
+  .bn-item.active {
+    color: var(--accent);
+  }
+
+  .app-shell {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .site-footer {
+    padding-bottom: 0.6rem;
+  }
+}
+
+/* ============================================================
+   بهبودهای لمسی موبایل (Web Interface Guidelines)
+   ============================================================ */
+@media (pointer: coarse) {
+  .btn,
+  .icon-btn,
+  .seg-btn,
+  .chip.clickable,
+  .toc-item,
+  .chapter-item,
+  .bn-item {
+    min-height: 44px;
+  }
+
+  .btn {
+    padding-block: 0.65rem;
+  }
+
+  .seg-btn {
+    padding: 0.55rem 0.9rem;
+  }
+}
+
+button,
+a,
+input[type='range'] {
+  touch-action: manipulation;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
 }

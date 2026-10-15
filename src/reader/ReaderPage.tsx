@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Novel, Volume } from '@/types';
 import { novelById, volumeById } from '@/services/catalog';
@@ -20,12 +20,52 @@ export default function ReaderPage() {
   const volume = useMemo(() => volumeById(novel, volumeId), [novel, volumeId]);
   useDocumentTitle(novel ? `${novel.titleFa ?? novel.titleOriginal ?? novel.id} — خواندن` : undefined);
 
+  /**
+   * رفع بهم‌ریختگی موبایل هنگام ورود/بازگشت:
+   * هنگام باز بودن کتاب‌خوان، اسکرول بدنه صفحه قفل و هنگام خروج
+   * دقیقاً به همان موقعیت قبلی بازگردانده می‌شود.
+   */
+  useEffect(() => {
+    const savedY = window.scrollY;
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'contain';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.overscrollBehavior = prevOverscroll;
+      // بازگردانی موقعیت اسکرول صفحه زیرین پس از آرام‌شدن چیدمان
+      requestAnimationFrame(() => {
+        window.scrollTo(0, savedY);
+      });
+    };
+  }, []);
+
   const initialCfi = params.get('cfi');
   const initialHref = params.get('ch');
+
+  /* --- ناوبری جلد قبلی/بعدی (برای دکمه پایان جلد) --- */
+  const volumeList = useMemo(
+    () => (novel ? [...novel.volumes].sort((a, b) => a.order - b.order) : []),
+    [novel],
+  );
+  const volumeIndex = useMemo(
+    () => volumeList.findIndex((v) => v.id === volumeId),
+    [volumeList, volumeId],
+  );
+  const nextVolume = volumeIndex >= 0 ? (volumeList[volumeIndex + 1] ?? null) : null;
 
   const exit = useCallback(() => {
     navigate(`/novel/${bookId}`);
   }, [navigate, bookId]);
+
+  const handleNextVolume = useCallback(() => {
+    if (nextVolume) {
+      navigate(`/read/${bookId}/${nextVolume.id}`);
+    } else {
+      navigate(`/novel/${bookId}`);
+    }
+  }, [navigate, bookId, nextVolume]);
 
   const handleProgress = useCallback(
     (p: { cfi: string; href: string; chapterTitle: string; percentage: number }) => {
@@ -110,10 +150,16 @@ export default function ReaderPage() {
       initialHref={startHref}
       savedPercentage={saved?.percentage ?? null}
       bookmarks={personal.bookmarks.filter((b) => b.bookId === novel.id && b.volumeId === volume.id)}
+      customFonts={personal.customFonts}
+      onAddCustomFont={personal.addCustomFont}
+      onDeleteCustomFont={personal.deleteCustomFont}
       onAddBookmark={handleAddBookmark}
       onDeleteBookmark={handleDeleteBookmark}
       onProgress={handleProgress}
       onChapterRead={handleChapterRead}
+      onNextVolume={handleNextVolume}
+      nextVolumeTitle={nextVolume?.title ?? null}
+      hasNextVolume={Boolean(nextVolume)}
       onExit={exit}
     />
   );

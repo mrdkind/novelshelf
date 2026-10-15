@@ -29,6 +29,8 @@ declare module 'epubjs' {
     manager?: 'default' | 'continuous';
     spread?: string | number;
     direction?: 'ltr' | 'rtl';
+    /** جهت پیش‌فرض — epub.js در کانستراکتور از این گزینه استفاده می‌کند (نه direction) */
+    defaultDirection?: 'ltr' | 'rtl';
     allowScriptedContent?: boolean;
     snap?: boolean | Record<string, unknown>;
     minSpreadWidth?: number;

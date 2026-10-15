@@ -1,19 +1,25 @@
 import { useState } from 'react';
-import { BookOpen, Menu, Moon, Sun, Search } from 'lucide-react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { BookOpen, Clock, Home, Library, Menu, Moon, Search, Settings, Heart, Sun } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { SITE_NAME, SITE_TAGLINE, REPO_URL } from '@/config';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounced } from '@/hooks/misc';
 import { useEffect } from 'react';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'خانه', end: true },
-  { to: '/library', label: 'کتابخانه' },
-  { to: '/favorites', label: 'علاقه‌مندی‌ها' },
-  { to: '/history', label: 'تاریخچه' },
-  { to: '/settings', label: 'تنظیمات' },
-  { to: '/guide', label: 'راهنما' },
-  { to: '/about', label: 'درباره' },
+  { to: '/', label: 'خانه', icon: Home, end: true },
+  { to: '/library', label: 'کتابخانه', icon: Library },
+  { to: '/favorites', label: 'علاقه‌مندی‌ها', icon: Heart },
+  { to: '/history', label: 'تاریخچه', icon: Clock },
+  { to: '/settings', label: 'تنظیمات', icon: Settings },
+];
+
+const BOTTOM_NAV_ITEMS = [
+  { to: '/', label: 'خانه', icon: Home, end: true },
+  { to: '/library', label: 'کتابخانه', icon: Library },
+  { to: '/favorites', label: 'علاقه‌مندی', icon: Heart },
+  { to: '/history', label: 'تاریخچه', icon: Clock },
+  { to: '/settings', label: 'تنظیمات', icon: Settings },
 ];
 
 function Header() {
@@ -52,6 +58,7 @@ function Header() {
         <nav className={`main-nav ${menuOpen ? 'open' : ''}`} aria-label="منوی اصلی">
           {NAV_ITEMS.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <item.icon size={16} aria-hidden="true" />
               {item.label}
             </NavLink>
           ))}
@@ -94,6 +101,24 @@ function Header() {
   );
 }
 
+/** نوار ناوبری پایین — فقط موبایل */
+function BottomNav() {
+  const location = useLocation();
+  return (
+    <nav className="bottom-nav" aria-label="ناوبری موبایل">
+      {BOTTOM_NAV_ITEMS.map((item) => {
+        const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
+        return (
+          <Link key={item.to} to={item.to} className={`bn-item ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined}>
+            <item.icon size={20} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 function Footer() {
   return (
     <footer className="site-footer">
@@ -126,19 +151,44 @@ function Footer() {
   );
 }
 
-/** پیمایش به بالای صفحه هنگام تغییر مسیر */
-function ScrollToTop() {
+/**
+ * مدیریت اسکرول هوشمند:
+ * - PUSH/REPLACE → پرش به بالای صفحه
+ * - POP (دکمه بازگشت) → بازیابی دقیق موقعیت قبلی از حافظه جلسه
+ * این کار «بهم‌ریختن صفحه» هنگام برگشت از صفحات دیگر (به‌ویژه کتاب‌خوان) را در موبایل برطرف می‌کند.
+ */
+function ScrollManager() {
   const { pathname, search } = useLocation();
+  const navType = useNavigationType();
+  const key = `${pathname}${search}`;
+
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname, search]);
+    if (navType === 'POP') {
+      const saved = sessionStorage.getItem(`ns-scroll:${key}`);
+      const y = saved ? Number(saved) : 0;
+      // پس از رندر و آرام‌شدن چیدمان بازیابی شود
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    } else {
+      window.scrollTo(0, 0);
+    }
+    const onScroll = () => {
+      try {
+        sessionStorage.setItem(`ns-scroll:${key}`, String(Math.round(window.scrollY)));
+      } catch {
+        /* حافظه پر است — نادیده */
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [key, navType]);
+
   return null;
 }
 
 export function Layout() {
   return (
     <div className="app-shell">
-      <ScrollToTop />
+      <ScrollManager />
       <Header />
       <main className="site-main">
         <div className="container">
@@ -146,6 +196,7 @@ export function Layout() {
         </div>
       </main>
       <Footer />
+      <BottomNav />
     </div>
   );
 }

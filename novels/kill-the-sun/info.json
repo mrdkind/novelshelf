@@ -1,0 +1,22 @@
+{
+  "id": "kill-the-sun",
+  "titleOriginal": "kill-the-sun",
+  "titleFa": "خورشید را بکش",
+  "titleAlt": ["kill the sun"],
+  "author": "Okina Baba",
+  "translator": null,
+  "description": "خلاصه داستان اینجا قرار می‌گیرد؛ حداقل بیست نویسه لازم است.",
+  "genres": ["فانتزی", "ایسکای"],
+  "language": "en",
+  "direction": "auto",
+  "status": "ongoing",
+  "cover": "d0ea5583-0b25-4ce4-930e-0dfe25be8cba.webp",
+  "year": 2015,
+  "license": null,
+  "source": null,
+  "notes": null,
+  "addedAt": "2026-10-15",
+  "volumes": [
+    { "file": "volume-01.epub", "title": "۲۰۰ جپتر اول", "order": 1 }
+  ]
+}

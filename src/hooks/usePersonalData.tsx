@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Bookmark, HistoryEntry, ReadingProgress } from '@/types';
-import { DEFAULT_READER_SETTINGS } from '@/types';
+import type { Bookmark, CustomFont, HistoryEntry, ReadingProgress } from '@/types';
+import { DEFAULT_READER_SETTINGS, normalizeReaderSettings } from '@/types';
 import type { ReaderSettings } from '@/types';
 import * as repo from '@/storage/repositories';
+import { registerCustomFontsInDocument } from '@/reader/readerSettings';
 
 /**
  * کانتکست داده‌های شخصی کاربر (ذخیره‌شده در مرورگر خود کاربر).
@@ -17,6 +18,10 @@ interface PersonalDataCtx {
   history: HistoryEntry[];
   readerSettings: ReaderSettings;
   setReaderSettings: (s: ReaderSettings) => void;
+  /** فونت‌های آپلودشده کاربر */
+  customFonts: CustomFont[];
+  addCustomFont: (f: Omit<CustomFont, 'id' | 'createdAt'>) => Promise<CustomFont>;
+  deleteCustomFont: (id: string) => Promise<void>;
   saveProgress: (p: ReadingProgress) => Promise<void>;
   toggleFavorite: (bookId: string) => Promise<void>;
   addBookmark: (b: Omit<Bookmark, 'id' | 'createdAt'>) => Promise<Bookmark>;
@@ -35,21 +40,26 @@ export function PersonalDataProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [readerSettings, setReaderSettingsState] = useState<ReaderSettings>(DEFAULT_READER_SETTINGS);
+  const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
 
   const refresh = useCallback(async () => {
     try {
-      const [progress, bms, favs, hist, settings] = await Promise.all([
+      const [progress, bms, favs, hist, settings, fonts] = await Promise.all([
         repo.getAllProgress(),
         repo.getAllBookmarks(),
         repo.getAllFavorites(),
         repo.getHistory(),
         repo.getSetting<ReaderSettings>('reader', DEFAULT_READER_SETTINGS),
+        repo.getSetting<CustomFont[]>('customFonts', []),
       ]);
       setProgressMap(new Map(progress.map((p) => [`${p.bookId}::${p.volumeId}`, p])));
       setBookmarks(bms.sort((a, b) => b.createdAt - a.createdAt));
       setFavorites(new Set(favs.map((f) => f.bookId)));
       setHistory(hist);
-      setReaderSettingsState({ ...DEFAULT_READER_SETTINGS, ...settings });
+      setReaderSettingsState(normalizeReaderSettings(settings));
+      const fontList = Array.isArray(fonts) ? fonts : [];
+      setCustomFonts(fontList);
+      registerCustomFontsInDocument(fontList);
     } catch (e) {
       console.warn('خواندن داده‌های محلی ناموفق بود:', e);
     } finally {
@@ -60,6 +70,34 @@ export function PersonalDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const addCustomFont = useCallback(async (f: Omit<CustomFont, 'id' | 'createdAt'>) => {
+    const font: CustomFont = {
+      ...f,
+      id: `cf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: Date.now(),
+    };
+    const next = [...customFonts, font].slice(-10); // سقف ۱۰ فونت
+    setCustomFonts(next);
+    await repo.setSetting('customFonts', next);
+    registerCustomFontsInDocument([font]);
+    return font;
+  }, [customFonts]);
+
+  const deleteCustomFont = useCallback(async (id: string) => {
+    const next = customFonts.filter((f) => f.id !== id);
+    setCustomFonts(next);
+    await repo.setSetting('customFonts', next);
+    // اگر فونت حذف‌شده انتخاب فعال بود، به وزیرمتن برگرد
+    setReaderSettingsState((s) => {
+      if (s.customFontId === id || s.fontFamily === 'custom') {
+        const ns = { ...s, fontFamily: 'vazirmatn' as const, customFontId: null };
+        void repo.setSetting('reader', ns);
+        return ns;
+      }
+      return s;
+    });
+  }, [customFonts]);
 
   const saveProgress = useCallback(async (p: ReadingProgress) => {
     await repo.saveProgress(p);
@@ -116,6 +154,9 @@ export function PersonalDataProvider({ children }: { children: ReactNode }) {
       history,
       readerSettings,
       setReaderSettings,
+      customFonts,
+      addCustomFont,
+      deleteCustomFont,
       saveProgress,
       toggleFavorite,
       addBookmark,
@@ -132,6 +173,9 @@ export function PersonalDataProvider({ children }: { children: ReactNode }) {
       history,
       readerSettings,
       setReaderSettings,
+      customFonts,
+      addCustomFont,
+      deleteCustomFont,
       saveProgress,
       toggleFavorite,
       addBookmark,

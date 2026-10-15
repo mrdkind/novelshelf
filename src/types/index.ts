@@ -100,16 +100,55 @@ export interface ReadChapterRecord {
   readAt: number;
 }
 
+/** تم‌های مطالعه کتاب‌خوان */
+export type ReaderTheme =
+  | 'dark'
+  | 'light'
+  | 'sepia'
+  | 'midnight'
+  | 'mocha'
+  | 'sage'
+  | 'slate'
+  | 'custom';
+
+/** فونت‌های پیش‌فرض کتاب‌خوان */
+export type ReaderFontFamily =
+  | 'default'
+  | 'vazirmatn'
+  | 'sahel'
+  | 'shabnam'
+  | 'estedad'
+  | 'amiri'
+  | 'naskh'
+  | 'custom';
+
+/** فونت آپلودشده توسط کاربر (ذخیره در IndexedDB به‌صورت Data URL) */
+export interface CustomFont {
+  id: string;
+  /** نام نمایشی فونت */
+  name: string;
+  /** Data URL کامل (data:font/woff2;base64,…) */
+  dataUrl: string;
+  /** قالب فایل برای @font-face */
+  format: 'woff2' | 'woff' | 'truetype' | 'opentype';
+  size: number;
+  createdAt: number;
+}
+
 /** تنظیمات کتاب‌خوان */
 export interface ReaderSettings {
-  theme: 'dark' | 'light' | 'sepia';
+  theme: ReaderTheme;
   /** درصد اندازه فونت (100 = پیش‌فرض) */
   fontSize: number;
   lineHeight: number;
   /** فاصله پاراگراف‌ها بر حسب em */
   paragraphSpacing: number;
+  /** فاصله کلمات بر حسب px */
+  wordSpacing: number;
   /** فونت کتاب: default = فونت خود کتاب */
-  fontFamily: 'default' | 'vazirmatn';
+  fontFamily: ReaderFontFamily;
+  /** شناسه فونت سفارشی انتخاب‌شده (وقتی fontFamily = custom) */
+  customFontId: string | null;
   /** عرض ستون متن (فقط حالت پیمایشی) بر حسب rem */
   maxWidth: number;
   /** حاشیه صفحه (فقط حالت پیمایشی) بر حسب px */
@@ -119,6 +158,18 @@ export interface ReaderSettings {
   /** حالت نمایش: paginated = صفحه‌بندی‌شده، scrolled = پیمایشی */
   readingMode: 'paginated' | 'scrolled';
   showToolbar: boolean;
+  /** رنگ سفارشی متن (وقتی theme = custom) */
+  textColor: string | null;
+  /** رنگ سفارشی پس‌زمینه (وقتی theme = custom) */
+  bgColor: string | null;
+  /** تصویر پس‌زمینه (Data URL — فقط حالت پیمایشی) */
+  bgImageUrl: string | null;
+  /** شفافیت رنگ پشت متن هنگام وجود تصویر پس‌زمینه (0..1) */
+  bgImageOpacity: number;
+  /** اسکرول خودکار (فقط حالت پیمایشی) */
+  autoScroll: boolean;
+  /** سرعت اسکرول خودکار (px بر ثانیه) */
+  autoScrollSpeed: number;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
@@ -126,14 +177,28 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   fontSize: 100,
   lineHeight: 1.8,
   paragraphSpacing: 0.8,
-  fontFamily: 'default',
+  wordSpacing: 0,
+  fontFamily: 'vazirmatn',
+  customFontId: null,
   maxWidth: 42,
   pageMargin: 24,
   textAlign: 'justify',
-  direction: 'auto',
-  readingMode: 'paginated',
+  // پیش‌فرض فارسی: راست‌به‌چپ (کاربر می‌تواند «خودکار» یا LTR را انتخاب کند)
+  direction: 'rtl',
+  readingMode: 'scrolled',
   showToolbar: true,
+  textColor: null,
+  bgColor: null,
+  bgImageUrl: null,
+  bgImageOpacity: 0.35,
+  autoScroll: false,
+  autoScrollSpeed: 40,
 };
+
+/** تنظیمات قبلی برای مهاجرت به‌روزرسانی‌های نرم */
+export function normalizeReaderSettings(raw: Partial<ReaderSettings> | null | undefined): ReaderSettings {
+  return { ...DEFAULT_READER_SETTINGS, ...(raw ?? {}) };
+}
 
 export interface SiteSettings {
   theme: 'dark' | 'light';
